@@ -10,7 +10,7 @@ from tencentcloud.tmt.v20180321 import tmt_client, models
 ErrorNum = 0
 def tran(input):
     try: 
-        cred = credential.Credential("AKIDRfcIk1bn45q5e4b4QVIbdOxGI3YRu9yW", "OGq9AvQdakdFruA8qHTPkofHby4tQggO") 
+        cred = credential.Credential("", "") 
         httpProfile = HttpProfile()
         httpProfile.endpoint = "tmt.tencentcloudapi.com"
 
@@ -35,6 +35,7 @@ def tran(input):
     except TencentCloudSDKException as err: 
         print("服务端错误：")
         print(err)
+        global ErrorNum
         if ErrorNum <= 8:
             ErrorNum+=1
             time.sleep(0.3)
