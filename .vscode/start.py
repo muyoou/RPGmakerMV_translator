@@ -37,7 +37,7 @@ def tran(input):
     except TencentCloudSDKException as err: 
         print(err) 
 
-path = r'C:\Gal\恋愛催眠\www\data'
+path = r'C:\Gal\時間停止2\www\data'
 oldtext=[]
 newtext=[]
 for filename in os.listdir(path):
@@ -46,6 +46,7 @@ for filename in os.listdir(path):
         newtext=[]
         print("--------------------"+filename+"--------------------")
         filename=os.path.join(path,filename)
+        print(filename)
         with open(filename, 'r',encoding='utf-8') as f:
             data = json.load(f)
             for item in range(len(data["events"])):

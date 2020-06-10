@@ -36,13 +36,11 @@ def tran(input):
 
     except TencentCloudSDKException as err: 
         print(err) 
-path = r'C:\Gal\催眠しちゃうぞ6\www\data'
+path = r'C:\Users\Muyoo\Desktop\支配の魔法ver1.70\支配の魔法ver1.70\www\data'
 oldtext=[]
 newtext=[]
 for filename in os.listdir(path):
     if re.match('^Map\d+.json',filename):
-        oldtext=[]
-        newtext=[]
         print("--------------------"+filename+"--------------------")
         filename=os.path.join(path,filename)
         with open(filename, 'r',encoding='utf-8') as f:
