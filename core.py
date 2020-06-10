@@ -200,9 +200,10 @@ class start():
         print("待翻译句子："+self.witeTranslate)
         minput = input("手动输入翻译")
         self.finishTranslate = minput
+        
     def tmpfun(self, tmps):
         for init in range(len(tmps)):
-            if not re.match('[<>「」(\[\d+\])(\\\\.)]+', tmps[init]) and tmps[init] != '':
+            if not re.match(r'[<>「」(\[\d+\])(\\\\.)]+', tmps[init]) and tmps[init] != '':
                 haveindex = 0
                 try:
                     haveindex = self.oldtext.index(tmps[init])
