@@ -7,8 +7,13 @@ import TencentAPI
 
 
 class start():
-    def __init__(self):
+    def __init__(self,event):
         self.indexs = [0, 0, 0, 0, 0]
+        self.event=event
+        # 需翻译的总句子量
+        self.allTaskNum=0
+        # 已经翻译的句子量
+        self.completedTaskNum=0
         # 所有需要翻译的map文件名
         self.mapFileName = []
         # 当前map文件的json数据
@@ -56,19 +61,19 @@ class start():
             for y, b in enumerate(a['pages']):
                 self.indexs[1] = y
                 for z, c in enumerate(b['list']):
-                    self.getStringByEvent(z,c,callBake)
+                    if self.getStringByEvent(z,c,callBake) == 'ERR':return 'ERR'
 
 
     def getStringByEvent(self,z,c,callBake):
-        if c['code'] in (401, 402, 118, 119):
+        if c['code'] in (401, 402, 118, 119,101):
             self.type = 1
             self.indexs[2] = z
             for w, d in enumerate(c['parameters']):
                 if d and isinstance(d, str):
                     self.indexs[3] = w
                     self.nowString = d
-                    callBake()
-        if c['code'] in (102, 101):
+                    if callBake() == 'ERR':return 'ERR'
+        if c['code'] == 102:
             self.type = 2
             self.indexs[2] = z
             for w, d in enumerate(c['parameters']):
@@ -78,7 +83,7 @@ class start():
                         if e and isinstance(e, str):
                             self.indexs[4] = v
                             self.nowString = e
-                            callBake()
+                            if callBake() == 'ERR':return 'ERR'
 
     def getEventJsonByCommon(self,callBake):
         self.state = 2
@@ -87,7 +92,7 @@ class start():
             if not a:
                 continue
             for y, b in enumerate(a['list']):
-                self.getStringByEvent(y,b,callBake)
+                if self.getStringByEvent(y,b,callBake) == 'ERR':return 'ERR'
 
     def getItemJson(self,callBake):
         self.state = 3
@@ -98,11 +103,11 @@ class start():
             if not a['description']=='':
                 self.type = 1
                 self.nowString = a['description']
-                callBake()
+                if callBake() == 'ERR':return 'ERR'
             if not a['name']=='':
                 self.type = 2
                 self.nowString = a['name']
-                callBake()
+                if callBake() ==  'ERR':return 'ERR'
 
     def printString(self):
         print()
@@ -112,7 +117,7 @@ class start():
             if not a:
                 continue
             for b in a['list']:
-                filter(b, function)
+                if filter(b, function) == 'ERR':return 'ERR'
 
     def eventFilter(self, event, function):
         if event['code'] in (401, 402, 118, 119):
@@ -122,10 +127,12 @@ class start():
         print(self.nowString)
         self.spiltString()
         print(self.nowSplitedList)
-        self.filter()
+        if self.filter()=='ERR': return 'ERR'
         self.nowString = ''.join(self.nowSplitedList)
         print(self.nowString)
         self.reSave()
+        self.completedTaskNum+=1
+        self.event.refreshNum()
         print()
         # self.tmpfun(self.whitList)
 
@@ -134,6 +141,8 @@ class start():
             if self.type == 1:
                 self.nowMapJson['events'][self.indexs[0]]['pages'][self.indexs[1]]['list'][self.indexs[2]]['parameters'][self.indexs[3]] = self.nowString
             elif self.type == 2:
+                print("DEBUG")
+                print(self.nowMapJson['events'][self.indexs[0]]['pages'][self.indexs[1]]['list'][self.indexs[2]]['parameters'])
                 self.nowMapJson['events'][self.indexs[0]]['pages'][self.indexs[1]]['list'][self.indexs[2]]['parameters'][self.indexs[3]][self.indexs[4]] = self.nowString
         elif self.state == 2:
             if self.type == 1:
@@ -177,21 +186,25 @@ class start():
                     self.nowSplitedList[index] = self.savedChinese[self.savedJapanese.index(item)]
                 else:
                     self.witeTranslate = item
-                    self.translate()
+                    if self.translate()=='ERR':return 'ERR'
                     self.nowSplitedList[index] = self.finishTranslate
 
     def translate(self):
+        time.sleep(0.1)
         fin = TencentAPI.tran(self.witeTranslate)
         if fin == 'ERROR':
             print("机翻错误！")
             if self.errorNum >= 3:
                 self.errorNum = 0
-                self.inputByUser()
+                #self.inputByUser()
+                self.finishTranslate=self.witeTranslate
             else:
                 self.errorNum+=1
                 time.sleep(0.5)
                 self.translate()
-
+        elif fin == "API_ERR":
+            self.event.showInfo("翻译API不存在，请检查ID和KEY是否输入正确")
+            return 'ERR'
         self.savedJapanese.append(self.witeTranslate)
         self.savedChinese.append(fin)
         self.finishTranslate = fin
@@ -200,40 +213,20 @@ class start():
         print("待翻译句子："+self.witeTranslate)
         minput = input("手动输入翻译")
         self.finishTranslate = minput
+
+    def getTaskNum(self):
+        for i in range(len(self.mapFileName)):
+            print("-----------"+self.mapFileName[i]+"---------------")
+            self.getMapJsonData(i)
+            self.getEventJsonByData(self.addOneNum)
+        self.getCommonMapJsonData()
+        self.getEventJsonByCommon(self.addOneNum)
+        self.getItemJsonData()
+        self.getItemJson(self.addOneNum)
+        print("一共有%d个句子"%(self.allTaskNum))
         
-    def tmpfun(self, tmps):
-        for init in range(len(tmps)):
-            if not re.match(r'[<>「」(\[\d+\])(\\\\.)]+', tmps[init]) and tmps[init] != '':
-                haveindex = 0
-                try:
-                    haveindex = self.oldtext.index(tmps[init])
-                    tmps[init] = self.newtext[haveindex]
-                except ValueError:
-                    self.oldtext.append(tmps[init])
-                    jifan = tran(tmps[init])
-                    if(jifan == 'ERROR'):
-                        tmps[init] = input("翻译：")
-                    else:
-                        tmps[init] = jifan
-                    self.newtext.append(tmps[init])
-                    #time.sleep(0.1)
-        output = ''.join(tmps)
-        print("机翻："+output)
-        return output
+    def addOneNum(self):
+        self.allTaskNum+=1
 
 
-s = start()
-s.getAllMapFileName()
 
-for i in range(len(s.mapFileName)):
-    print("-----------"+s.mapFileName[i]+"---------------")
-    s.getMapJsonData(i)
-    s.getEventJsonByData(s.dealString)
-    s.save(i)
-    print("------------已完成-----------")
-s.getCommonMapJsonData()
-s.getEventJsonByCommon(s.dealString)
-s.saveCommon()
-s.getItemJsonData()
-s.getItemJson(s.dealString)
-s.saveItem()

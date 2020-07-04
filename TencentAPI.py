@@ -1,6 +1,7 @@
 #腾讯API对接
 import json
 import time
+import config
 from tencentcloud.common import credential
 from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.common.profile.http_profile import HttpProfile
@@ -10,10 +11,9 @@ from tencentcloud.tmt.v20180321 import tmt_client, models
 ErrorNum = 0
 def tran(input):
     try: 
-        cred = credential.Credential("", "") 
+        cred = credential.Credential(config.ApiID,config.ApiKEY ) 
         httpProfile = HttpProfile()
         httpProfile.endpoint = "tmt.tencentcloudapi.com"
-
         clientProfile = ClientProfile()
         clientProfile.httpProfile = httpProfile
         client = tmt_client.TmtClient(cred, "ap-beijing", clientProfile) 
@@ -34,11 +34,11 @@ def tran(input):
 
     except TencentCloudSDKException as err: 
         print("服务端错误：")
-        print(err)
-        global ErrorNum
-        if ErrorNum <= 8:
-            ErrorNum+=1
+        print(err.code)
+        if err.code=='InvalidCredential':
+            print("翻译API不存在")
+            return 'API_ERR'
+        elif err.code=='RequestLimitExceeded':
+            print("连接频繁")
             time.sleep(0.3)
-            tran(input)
-        else:
-            ErrorNum = 0
+            return tran(input)
